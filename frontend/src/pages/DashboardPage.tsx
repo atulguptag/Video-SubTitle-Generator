@@ -15,7 +15,6 @@ import {
   CardMedia,
   CardActions,
   Divider,
-  Grid,
   Dialog,
   DialogActions,
   DialogContent,
@@ -324,12 +323,28 @@ const DashboardPage: React.FC = () => {
                 </Button>
               </Paper>
             ) : (
-              <Grid container spacing={3}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 3,
+                }}
+              >
                 {videos.map((video, index) => {
                   const statusProps = getStatusChipProps(video.status);
 
                   return (
-                    <Grid item xs={12} sm={6} md={4} key={video.id}>
+                    <Box
+                      key={video.id}
+                      sx={{
+                        width: {
+                          xs: "100%",
+                          sm: "calc(50% - 12px)",
+                          md: "calc(33.333% - 16px)",
+                        },
+                        mb: 3,
+                      }}
+                    >
                       <Fade in={true} timeout={300 + index * 100}>
                         <Card
                           sx={{
@@ -527,10 +542,10 @@ const DashboardPage: React.FC = () => {
                           </CardActions>
                         </Card>
                       </Fade>
-                    </Grid>
+                    </Box>
                   );
                 })}
-              </Grid>
+              </Box>
             )}
           </>
         )}

@@ -13,11 +13,10 @@ import {
   IconButton,
   InputAdornment,
 } from "@mui/material";
-import { useGoogleLogin, GoogleLoginResponse } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { toast } from "react-toastify";
-import GoogleIcon from "@mui/icons-material/Google";
 import FacebookIcon from "@mui/icons-material/Facebook";
 
 // Facebook response type
@@ -53,6 +52,8 @@ const Register: React.FC = () => {
   const { register, googleLogin, facebookLogin } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -93,17 +94,17 @@ const Register: React.FC = () => {
 
   // Google Login
   const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (response: GoogleLoginResponse) => {
-      setIsLoading(true);
+    onSuccess: async (response) => {
+      setIsGoogleLoading(true);
       try {
         await googleLogin(response.access_token);
         navigate("/dashboard");
-        toast.success("Successfully Logged in via Google!");
+        toast.success("Login Successfully via Google!");
       } catch (err: any) {
         console.error("Google login failed:", err);
         toast.error("Google login failed. Please try again.");
       } finally {
-        setIsLoading(false);
+        setIsGoogleLoading(true);
       }
     },
     onError: () => {
@@ -114,7 +115,7 @@ const Register: React.FC = () => {
   // Facebook Login
   const handleFacebookLogin = async (response: FacebookLoginResponse) => {
     if (response.accessToken) {
-      setIsLoading(true);
+      setIsFacebookLoading(true);
       try {
         await facebookLogin(response.accessToken);
         navigate("/dashboard");
@@ -123,7 +124,7 @@ const Register: React.FC = () => {
         console.error("Facebook login failed:", err);
         toast.error("Facebook login failed. Please try again.");
       } finally {
-        setIsLoading(false);
+        setIsFacebookLoading(true);
       }
     }
   };
@@ -247,26 +248,36 @@ const Register: React.FC = () => {
           <Button
             fullWidth
             variant="outlined"
-            startIcon={
-              isLoading ? (
-                <CircularProgress size={20} />
-              ) : (
-                <GoogleIcon sx={{ color: "#4285F4" }} />
-              )
-            }
             onClick={() => handleGoogleLogin()}
-            disabled={isLoading}
+            disabled={isGoogleLoading || isFacebookLoading}
             sx={{
               borderColor: "#4285F4",
               color: "#4285F4",
+              display: "flex",
+              gap: 2,
+              justifyContent: "center",
+              alignItems: "center",
               "&:hover": {
                 borderColor: "#4285F4",
-                backgroundColor: "rgba(66, 133, 244, 0.04)",
+                backgroundColor: "rgba(0, 0, 0, 0.04)",
               },
             }}
           >
+            {isGoogleLoading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <Box
+                component="img"
+                src="/google-image.png"
+                alt="Google logo"
+                sx={{
+                  width: "20px",
+                  height: "20px",
+                  objectFit: "contain",
+                }}
+              />
+            )}
             Continue with Google
-            {/* {isLoading ? "Connecting..." : "Continue with Google"} */}
           </Button>
 
           <FacebookLogin
@@ -277,14 +288,14 @@ const Register: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 startIcon={
-                  isLoading ? (
+                  isFacebookLoading ? (
                     <CircularProgress size={20} />
                   ) : (
                     <FacebookIcon sx={{ color: "#1877F2" }} />
                   )
                 }
                 onClick={renderProps.onClick}
-                disabled={isLoading}
+                disabled={isGoogleLoading || isFacebookLoading}
                 sx={{
                   borderColor: "#1877F2",
                   color: "#1877F2",
@@ -295,7 +306,6 @@ const Register: React.FC = () => {
                 }}
               >
                 Continue with Facebook
-                {/* {isLoading ? "Connecting..." : "Continue with Facebook"} */}
               </Button>
             )}
           />

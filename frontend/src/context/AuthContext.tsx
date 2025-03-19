@@ -45,7 +45,7 @@ interface AuthContextType {
     verification_code: string,
     new_password: string
   ) => Promise<void>;
-  googleLogin: (token: string) => Promise<LoginResponse>;
+  googleLogin: (token: string) => Promise<any>;
   facebookLogin: (token: string) => Promise<LoginResponse>;
   updateProfile: (profileData: any) => Promise<User>;
   resendVerificationEmail: (email: string) => Promise<void>;
@@ -172,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const googleLogin = async (token: string): Promise<LoginResponse> => {
+  const googleLogin = async (token: string) => {
     try {
       const response = await authService.googleLogin(token);
       const { token: authToken, user } = response.data;

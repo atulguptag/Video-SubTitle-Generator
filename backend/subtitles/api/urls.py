@@ -1,15 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SubtitleViewSet, export_subtitle
+from .views import SubtitleViewSet
 
 router = DefaultRouter()
-router.register(r'', SubtitleViewSet, basename='subtitle')
-
-# Create a direct URL pattern for generating subtitles
-generate_view = SubtitleViewSet.as_view({'post': 'generate'})
+router.register(r'subtitles', SubtitleViewSet, basename='subtitle')
 
 urlpatterns = [
-    path('subtitles/', include(router.urls)),
-    path('subtitles/<int:pk>/download/', export_subtitle, name='subtitle-export'),
-    path('subtitles/generate/', generate_view, name='subtitle-generate'),
+    path('', include(router.urls)),
+    # path('subtitles/<int:pk>/export_subtitle/',
+    #      SubtitleViewSet.as_view({'get': 'export_subtitle'})),
 ]

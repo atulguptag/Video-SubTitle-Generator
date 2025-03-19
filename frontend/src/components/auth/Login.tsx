@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Button,
@@ -13,11 +13,10 @@ import {
   IconButton,
   InputAdornment,
 } from "@mui/material";
-import { useGoogleLogin, GoogleLoginResponse } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { toast } from "react-toastify";
-import GoogleIcon from "@mui/icons-material/Google";
 import FacebookIcon from "@mui/icons-material/Facebook";
 
 // Facebook response type
@@ -51,6 +50,22 @@ const Login: React.FC = () => {
 
   const { login, googleLogin, facebookLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle redirect from Google OAuth if coming back with a token
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+    const error = params.get("error");
+
+    if (error) {
+      toast.error("Authentication failed. Please try again");
+    } else if (token) {
+      localStorage.setItem("token", token);
+      toast.success("Google login successful!");
+      navigate("/dashboard");
+    }
+  }, [location, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,11 +84,11 @@ const Login: React.FC = () => {
 
   // Google Login
   const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (response: GoogleLoginResponse) => {
+    onSuccess: async (response) => {
       setIsGoogleLoading(true);
       try {
         await googleLogin(response.access_token);
-        toast.success("Login Successful!");
+        toast.success("Login Successfully via Google!");
         navigate("/dashboard");
       } catch (err: any) {
         console.error("Google login failed:", err);
@@ -93,8 +108,8 @@ const Login: React.FC = () => {
       setIsFacebookLoading(true);
       try {
         await facebookLogin(response.accessToken);
-        toast.success("Login Successful!");
         navigate("/dashboard");
+        toast.success("Successfully Logged in via Facebook!")
       } catch (err: any) {
         console.error("Facebook login failed:", err);
         toast.error("Facebook login failed. Please try again.");
@@ -119,6 +134,7 @@ const Login: React.FC = () => {
         <Typography variant="h4" component="h1" gutterBottom align="center">
           Sign In
         </Typography>
+
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
             margin="normal"
@@ -192,26 +208,36 @@ const Login: React.FC = () => {
           <Button
             fullWidth
             variant="outlined"
-            startIcon={
-              isGoogleLoading ? (
-                <CircularProgress size={20} />
-              ) : (
-                <GoogleIcon sx={{ color: "#4285F4" }} />
-              )
-            }
             onClick={() => handleGoogleLogin()}
             disabled={isGoogleLoading || isFacebookLoading}
             sx={{
               borderColor: "#4285F4",
               color: "#4285F4",
+              display: "flex",
+              gap: 2,
+              justifyContent: "center",
+              alignItems: "center",
               "&:hover": {
                 borderColor: "#4285F4",
-                backgroundColor: "rgba(66, 133, 244, 0.04)",
+                backgroundColor: "rgba(0, 0, 0, 0.04)",
               },
             }}
           >
+            {isGoogleLoading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <Box
+                component="img"
+                src="/google-image.png"
+                alt="Google logo"
+                sx={{
+                  width: "20px",
+                  height: "20px",
+                  objectFit: "contain",
+                }}
+              />
+            )}
             Continue with Google
-            {/* {isGoogleLoading ? "Connecting..." : "Login with Google"} */}
           </Button>
 
           <FacebookLogin
@@ -240,7 +266,6 @@ const Login: React.FC = () => {
                 }}
               >
                 Continue with Facebook
-                {/* {isFacebookLoading ? "Connecting..." : "Login with Facebook"} */}
               </Button>
             )}
           />

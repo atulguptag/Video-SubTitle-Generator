@@ -5,7 +5,6 @@ import {
   Typography,
   Paper,
   Avatar,
-  Grid,
   TextField,
   Button,
   Divider,
@@ -29,7 +28,7 @@ import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 
-// Styled components
+// Styled components (unchanged)
 const ProfileAvatar = styled(Avatar)(({ theme }) => ({
   width: 150,
   height: 150,
@@ -160,12 +159,10 @@ const ProfilePage: React.FC = () => {
 
   const handleEditToggle = () => {
     if (!isEditing) {
-      // When starting to edit, save the current profile image path
       if (user?.profile_picture) {
         setOldImagePath(user.profile_picture);
       }
     } else {
-      // When canceling edit, reset image preview
       setImagePreview(null);
     }
     setIsEditing(!isEditing);
@@ -175,7 +172,6 @@ const ProfilePage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Create data object for profile update
       let data: any = {
         username: profileData.name,
         email: profileData.email,
@@ -185,9 +181,7 @@ const ProfilePage: React.FC = () => {
         social_links: profileData.socialLinks,
       };
 
-      // Handle different image scenarios
       if (removeProfilePicture) {
-        // If user wants to remove the profile picture
         data.remove_profile_picture = true;
 
         // If there's an old image path, include it for deletion
@@ -197,51 +191,34 @@ const ProfilePage: React.FC = () => {
             data.old_profile_picture = oldImageFilename;
           }
         }
-
-        // Update profile with remove flag
         await updateProfile(data);
       } else if (profileData.profileImage) {
-        // If user is uploading a new image
-        // Create FormData for image upload
         const formData = new FormData();
         formData.append("profile_picture", profileData.profileImage);
 
         // If there's an old image path, include it for deletion on the server
         if (oldImagePath) {
-          // Extract just the filename from the path
           const oldImageFilename = oldImagePath.split("/").pop();
           if (oldImageFilename) {
             formData.append("old_profile_picture", oldImageFilename);
           }
         }
-
-        // Add other profile data to the same form
         Object.keys(data).forEach((key) => {
-          // Handle nested social_links object
           if (key === "social_links") {
             formData.append(key, JSON.stringify(data[key]));
           } else {
             formData.append(key, data[key]);
           }
         });
-
-        // Update profile with form data containing the image
-        await (
-          updateProfile as (data: any, isFormData?: boolean) => Promise<any>
-        )(formData, true);
+        await updateProfile(formData, true);
       } else {
-        // Update profile with regular JSON data (no image)
         await updateProfile(data);
       }
 
-      // Show success message
       toast.success("Profile updated successfully!");
-
-      // Reset image state after successful update
       setOldImagePath(null);
       setImagePreview(null);
       setRemoveProfilePicture(false);
-
       setIsEditing(false);
     } catch (error) {
       toast.error("Failed to update profile. Please try again.");
@@ -260,7 +237,6 @@ const ProfilePage: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
       if (parent === "socialLinks" && child) {
@@ -342,7 +318,6 @@ const ProfilePage: React.FC = () => {
                           <PhotoCameraIcon />
                         </IconButton>
                       </Tooltip>
-
                       {user?.profile_picture && !removeProfilePicture && (
                         <Tooltip title="Remove">
                           <IconButton
@@ -444,109 +419,111 @@ const ProfilePage: React.FC = () => {
         <Divider sx={{ my: 4 }} />
 
         <Box>
-          <Grid container spacing={isMobile ? 2 : 4}>
-            <Grid item xs={12} md={6}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: isMobile ? 2 : 4,
+            }}
+          >
+            {/* Personal Information Section */}
+            <Box sx={{ flex: 1 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Personal Information
               </Typography>
 
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Username"
-                      name="username"
-                      value={profileData.name}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        Username
-                      </Typography>
-                      <Typography variant="body1">
-                        {profileData.name}
-                      </Typography>
-                    </>
-                  )}
-                </Grid>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1,
+                  mt: 1,
+                }}
+              >
+                {isEditing ? (
+                  <TextField
+                    fullWidth
+                    label="Username"
+                    name="name"
+                    value={profileData.name}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    size="small"
+                    disabled
+                  />
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Username
+                    </Typography>
+                    <Typography variant="body1">{profileData.name}</Typography>
+                  </>
+                )}
 
-                <Grid item xs={12}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      name="email"
-                      value={profileData.email}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                      disabled
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        Email
-                      </Typography>
-                      <Typography variant="body1">
-                        {profileData.email}
-                      </Typography>
-                    </>
-                  )}
-                </Grid>
+                {isEditing ? (
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    name="email"
+                    value={profileData.email}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    size="small"
+                    disabled
+                  />
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Email
+                    </Typography>
+                    <Typography variant="body1">{profileData.email}</Typography>
+                  </>
+                )}
 
-                <Grid item xs={12}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Phone"
-                      name="phone"
-                      value={profileData.phone}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        Phone
-                      </Typography>
-                      <Typography variant="body1">
-                        {profileData.phone}
-                      </Typography>
-                    </>
-                  )}
-                </Grid>
+                {isEditing ? (
+                  <TextField
+                    fullWidth
+                    label="Phone"
+                    name="phone"
+                    value={profileData.phone}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    size="small"
+                  />
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Phone
+                    </Typography>
+                    <Typography variant="body1">{profileData.phone}</Typography>
+                  </>
+                )}
 
-                <Grid item xs={12}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Location"
-                      name="location"
-                      value={profileData.location}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        Location
-                      </Typography>
-                      <Typography variant="body1">
-                        {profileData.location}
-                      </Typography>
-                    </>
-                  )}
-                </Grid>
-              </Grid>
-            </Grid>
+                {isEditing ? (
+                  <TextField
+                    fullWidth
+                    label="Location"
+                    name="location"
+                    value={profileData.location}
+                    onChange={handleInputChange}
+                    variant="outlined"
+                    size="small"
+                  />
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Location
+                    </Typography>
+                    <Typography variant="body1">
+                      {profileData.location}
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            </Box>
 
-            <Grid item xs={12} md={6}>
+            {/* About Me and Social Media Section */}
+            <Box sx={{ flex: 1 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 About Me
               </Typography>
@@ -578,167 +555,192 @@ const ProfilePage: React.FC = () => {
                 Social Media
               </Typography>
 
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Facebook"
-                      name="socialLinks.facebook"
-                      value={profileData.socialLinks.facebook}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <FacebookIcon
-                            fontSize="small"
-                            sx={{ mr: 1, color: "#3b5998" }}
-                          />
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <FacebookIcon
-                        fontSize="small"
-                        sx={{ mr: 1, color: "#3b5998" }}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  mt: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 2,
+                  }}
+                >
+                  {/* Facebook */}
+                  <Box sx={{ width: { xs: "100%", sm: "calc(50% - 8px)" } }}>
+                    {isEditing ? (
+                      <TextField
+                        fullWidth
+                        label="Facebook"
+                        name="socialLinks.facebook"
+                        value={profileData.socialLinks.facebook}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        size="small"
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <FacebookIcon
+                                fontSize="small"
+                                sx={{ mr: 1, color: "#3b5998" }}
+                              />
+                            ),
+                          },
+                        }}
                       />
-                      <Typography
-                        variant="body2"
-                        component="a"
-                        href={profileData.socialLinks.facebook}
-                        target="_blank"
-                        sx={{ color: "primary.main", textDecoration: "none" }}
-                      >
-                        Facebook Profile
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
+                    ) : (
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <FacebookIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "#3b5998" }}
+                        />
+                        <Typography
+                          variant="body2"
+                          component="a"
+                          href={profileData.socialLinks.facebook}
+                          target="_blank"
+                          sx={{ color: "primary.main", textDecoration: "none" }}
+                        >
+                          Facebook Profile
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
 
-                <Grid item xs={12} sm={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Twitter"
-                      name="socialLinks.twitter"
-                      value={profileData.socialLinks.twitter}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <TwitterIcon
-                            fontSize="small"
-                            sx={{ mr: 1, color: "#1da1f2" }}
-                          />
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <TwitterIcon
-                        fontSize="small"
-                        sx={{ mr: 1, color: "#1da1f2" }}
+                  {/* Twitter */}
+                  <Box sx={{ width: { xs: "100%", sm: "calc(50% - 8px)" } }}>
+                    {isEditing ? (
+                      <TextField
+                        fullWidth
+                        label="Twitter"
+                        name="socialLinks.twitter"
+                        value={profileData.socialLinks.twitter}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        size="small"
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <TwitterIcon
+                                fontSize="small"
+                                sx={{ mr: 1, color: "#1da1f2" }}
+                              />
+                            ),
+                          },
+                        }}
                       />
-                      <Typography
-                        variant="body2"
-                        component="a"
-                        href={profileData.socialLinks.twitter}
-                        target="_blank"
-                        sx={{ color: "primary.main", textDecoration: "none" }}
-                      >
-                        Twitter Profile
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
+                    ) : (
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <TwitterIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "#1da1f2" }}
+                        />
+                        <Typography
+                          variant="body2"
+                          component="a"
+                          href={profileData.socialLinks.twitter}
+                          target="_blank"
+                          sx={{ color: "primary.main", textDecoration: "none" }}
+                        >
+                          Twitter Profile
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
 
-                <Grid item xs={12} sm={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="LinkedIn"
-                      name="socialLinks.linkedin"
-                      value={profileData.socialLinks.linkedin}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <LinkedInIcon
-                            fontSize="small"
-                            sx={{ mr: 1, color: "#0077b5" }}
-                          />
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <LinkedInIcon
-                        fontSize="small"
-                        sx={{ mr: 1, color: "#0077b5" }}
+                  {/* LinkedIn */}
+                  <Box sx={{ width: { xs: "100%", sm: "calc(50% - 8px)" } }}>
+                    {isEditing ? (
+                      <TextField
+                        fullWidth
+                        label="LinkedIn"
+                        name="socialLinks.linkedin"
+                        value={profileData.socialLinks.linkedin}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        size="small"
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <LinkedInIcon
+                                fontSize="small"
+                                sx={{ mr: 1, color: "#0077b5" }}
+                              />
+                            ),
+                          },
+                        }}
                       />
-                      <Typography
-                        variant="body2"
-                        component="a"
-                        href={profileData.socialLinks.linkedin}
-                        target="_blank"
-                        sx={{ color: "primary.main", textDecoration: "none" }}
-                      >
-                        LinkedIn Profile
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
+                    ) : (
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <LinkedInIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "#0077b5" }}
+                        />
+                        <Typography
+                          variant="body2"
+                          component="a"
+                          href={profileData.socialLinks.linkedin}
+                          target="_blank"
+                          sx={{ color: "primary.main", textDecoration: "none" }}
+                        >
+                          LinkedIn Profile
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
 
-                <Grid item xs={12} sm={6}>
-                  {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="Instagram"
-                      name="socialLinks.instagram"
-                      value={profileData.socialLinks.instagram}
-                      onChange={handleInputChange}
-                      variant="outlined"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <InstagramIcon
-                            fontSize="small"
-                            sx={{ mr: 1, color: "#e1306c" }}
-                          />
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <InstagramIcon
-                        fontSize="small"
-                        sx={{ mr: 1, color: "#e1306c" }}
+                  {/* Instagram */}
+                  <Box sx={{ width: { xs: "100%", sm: "calc(50% - 8px)" } }}>
+                    {isEditing ? (
+                      <TextField
+                        fullWidth
+                        label="Instagram"
+                        name="socialLinks.instagram"
+                        value={profileData.socialLinks.instagram}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        size="small"
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InstagramIcon
+                                fontSize="small"
+                                sx={{ mr: 1, color: "#e1306c" }}
+                              />
+                            ),
+                          },
+                        }}
                       />
-                      <Typography
-                        variant="body2"
-                        component="a"
-                        href={profileData.socialLinks.instagram}
-                        target="_blank"
-                        sx={{ color: "primary.main", textDecoration: "none" }}
-                      >
-                        Instagram Profile
-                      </Typography>
-                    </Box>
-                  )}
-                </Grid>
-              </Grid>
-            </Grid>
-          </Grid>
+                    ) : (
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <InstagramIcon
+                          fontSize="small"
+                          sx={{ mr: 1, color: "#e1306c" }}
+                        />
+                        <Typography
+                          variant="body2"
+                          component="a"
+                          href={profileData.socialLinks.instagram}
+                          target="_blank"
+                          sx={{ color: "primary.main", textDecoration: "none" }}
+                        >
+                          Instagram Profile
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
         </Box>
 
-        {/* Add a divider for visual separation */}
         <Divider sx={{ my: 4 }} />
 
-        {/* Add the buttons at the bottom with center alignment */}
         <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
           {!isEditing ? (
             <Button

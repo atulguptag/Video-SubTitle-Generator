@@ -7,6 +7,9 @@ from .views import (
     PasswordResetRequestView,
     PasswordResetVerifyView,
     UserDetailView,
+    GoogleLoginView,
+    GoogleCallbackView,
+    GoogleAuthProcessView,
 )
 
 urlpatterns = [
@@ -21,4 +24,11 @@ urlpatterns = [
     path('verify-password-reset/', PasswordResetVerifyView.as_view(),
          name='verify-password-reset'),
     path('me/', UserDetailView.as_view(), name='user-detail'),
+
+    # Google OAuth endpoints
+    path('google/', GoogleLoginView.as_view(), name='google-login'),
+    path('google/callback/', GoogleCallbackView.as_view(), name='google-callback'),
+    path('google/process-token/', GoogleAuthProcessView.as_view(),
+         name='google-process-token'),
+
 ]

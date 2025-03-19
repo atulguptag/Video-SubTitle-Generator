@@ -22,6 +22,10 @@ from .serializers import (
     PasswordResetVerifySerializer,
     ProfileUpdateSerializer,
 )
+import requests
+from google.oauth2 import id_token
+from django.shortcuts import redirect
+from google.auth.transport import requests as google_requests
 
 User = get_user_model()
 
@@ -103,8 +107,7 @@ class UserRegistrationView(generics.CreateAPIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
 
-        frontend_url = settings.FRONTEND_URL
-        verification_url = f"{frontend_url}/verification-email/{uid}/{token}/"
+        verification_url = f"{settings.FRONTEND_URL}/verification-email/{uid}/{token}/"
 
         email_subject = "Verify Your Email Address"
         email_message = f"""
@@ -318,41 +321,42 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        
+
         # Handle profile picture removal
         if request.data.get('remove_profile_picture') == 'true':
             # Get the old file path if it exists
             if instance.profile_picture:
                 try:
                     old_picture_path = instance.profile_picture.path
-                    
+
                     # Delete the file if it exists
                     if os.path.isfile(old_picture_path):
                         os.remove(old_picture_path)
-                    
+
                     # Clear the profile_picture field
                     instance.profile_picture = None
                     instance.save(update_fields=['profile_picture'])
                 except Exception as e:
                     print(f"Error removing profile picture: {e}")
-        
+
         # Handle profile picture update (existing code)
         elif 'profile_picture' in request.FILES:
             # Check if we should delete the old picture
             old_picture_filename = request.data.get('old_profile_picture')
-            
+
             if old_picture_filename and instance.profile_picture:
                 try:
                     # Get the old file path
-                    old_picture_path = os.path.join(settings.MEDIA_ROOT, 'profile_pictures', old_picture_filename)
-                    
+                    old_picture_path = os.path.join(
+                        settings.MEDIA_ROOT, 'profile_pictures', old_picture_filename)
+
                     # Delete the old file if it exists
                     if os.path.isfile(old_picture_path):
                         os.remove(old_picture_path)
                 except Exception as e:
                     # Log the error but continue with update
                     print(f"Error deleting old profile picture: {e}")
-        
+
         serializer = self.get_serializer(
             instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -366,3 +370,162 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
             'message': 'Profile updated successfully'
         })
 
+
+class GoogleLoginView(APIView):
+    """View for initiating Google OAuth login."""
+
+    def get(self, request):
+        """Redirect to Google OAuth consent screen."""
+        google_auth_url = (
+            f"https://accounts.google.com/o/oauth2/auth"
+            f"?client_id={settings.GOOGLE_CLIENT_ID}"
+            f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
+            f"&response_type=code"
+            f"&scope=email profile"
+            f"&access_type=offline"
+        )
+        return redirect(google_auth_url)
+
+
+class GoogleCallbackView(APIView):
+    """Handle Google OAuth callback."""
+
+    def get(self, request):
+        """Process Google OAuth callback."""
+        code = request.GET.get('code')
+        error = request.GET.get('error')
+
+        if error or not code:
+            return redirect(f"{settings.FRONTEND_URL}/login?error=google_auth_failed")
+
+        # Exchange code for access token
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "code": code,
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }
+
+        token_response = requests.post(token_url, data=token_data)
+        if token_response.status_code != 200:
+            return redirect(f"{settings.FRONTEND_URL}/login?error=token_exchange_failed")
+
+        token_json = token_response.json()
+        id_info = id_token.verify_oauth2_token(
+            token_json['id_token'],
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID
+        )
+
+        # Check if user exists, create if not
+        email = id_info.get('email')
+        if not email:
+            return redirect(f"{settings.FRONTEND_URL}/login?error=email_not_provided")
+
+        # Get or create user
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Create new user
+            username = id_info.get('name', '').replace(
+                ' ', '') or email.split('@')[0]
+            user = User.objects.create(
+                email=email,
+                username=username,
+                is_email_verified=id_info.get('email_verified', False)
+            )
+            # Set a random password since it's not used for OAuth login
+            user.set_unusable_password()
+            user.save()
+
+        # Generate auth token
+        token, _ = Token.objects.get_or_create(user=user)
+
+        # Redirect to frontend with token
+        return redirect(f"{settings.FRONTEND_URL}/google-auth-success?token={token.key}")
+
+
+class GoogleAuthProcessView(APIView):
+    """Process Google authentication token from frontend."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        """Process Google access token sent from frontend."""
+        token = request.data.get('token')
+        if not token:
+            return Response(
+                {'error': 'Token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Use access token to get user info from Google
+            user_info_response = requests.get(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {token}'}
+            )
+
+            if user_info_response.status_code != 200:
+                return Response(
+                    {'error': f'Failed to get user info: {user_info_response.text}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user_info = user_info_response.json()
+
+            # Get user email
+            email = user_info.get('email')
+            if not email:
+                return Response(
+                    {'error': 'Email not provided by Google'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get or create user
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # Create new user
+                username = user_info.get('name', '').replace(
+                    ' ', '') or email.split('@')[0]
+
+                # Check if username exists, add numbers if needed
+                base_username = username
+                counter = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                user = User.objects.create(
+                    email=email,
+                    username=username,
+                    is_email_verified=user_info.get('email_verified', False)
+                )
+                user.set_unusable_password()
+                user.save()
+
+            # Generate auth token
+            token, _ = Token.objects.get_or_create(user=user)
+
+            return Response({
+                'token': token.key,
+                'user_id': user.pk,
+                'email': user.email,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_email_verified': user.is_email_verified
+                }
+            })
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Error processing token: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

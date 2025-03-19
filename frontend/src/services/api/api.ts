@@ -56,7 +56,8 @@ export const authService = {
   resendVerificationEmail: (email: string) =>
     API.post("/auth/resend-verification-email/", { email }),
 
-  googleLogin: (token: string) => API.post("/auth/google/", { token }),
+  googleLogin: (token: string) =>
+    API.post("/auth/google/process-token/", { token }),
 
   facebookLogin: (token: string) => API.post("/auth/facebook/", { token }),
 
@@ -99,7 +100,7 @@ export const subtitleService = {
     API.patch(`/subtitles/${id}/`, styleData),
 
   exportSubtitles: (id: number, format: string) =>
-    API.get(`/subtitles/${id}/download/`, {
+    API.get(`/subtitles/${id}/export_subtitle/`, {
       params: { format },
       responseType: "blob",
     }),

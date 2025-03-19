@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'authentication',
     'videos',
     'subtitles',
+    'django_extensions'
 ]
 
 MIDDLEWARE = [
@@ -186,6 +187,11 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Google OAuth settings
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET')
+GOOGLE_REDIRECT_URI = config('GOOGLE_REDIRECT_URI')
 
 # FRONTEND URL
 FRONTEND_URL = config("REACT_FRONTEND_URL")
