@@ -34,29 +34,78 @@ A web application that automatically generates and customizes subtitles for vide
 - Node.js and npm
 - Python 3.8+
 - PostgreSQL (optional, SQLite is used by default)
+- **RabbitMQ** (for Celery task queue)
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository**:
 
    ```
    git clone https://github.com/atulguptag/Video-SubTitle-Generator.git
    cd Video-SubTitle-Generator
    ```
 
-2. Set up the backend:
+2. **Set up the backend**:
 
    ```
    cd backend
    python -m venv venv
-   .\venv\Scripts\Activate.ps1  # On Windows
+   .\venv\Scripts\activate      # On Windows
    source venv/bin/activate     # On macOS/Linux
    pip install -r requirements.txt
    python manage.py migrate
    python manage.py createsuperuser  # Follow prompts to create an admin user
    ```
 
-3. Set up the frontend:
+3. **Set up RabbitMQ (required for Celery task queue)**:
+
+   #### For Windows:
+
+   - Download and install Erlang from [Erlang's official site](https://www.erlang.org/downloads).
+   - Download and install RabbitMQ from [RabbitMQ's official site](https://www.rabbitmq.com/install-windows.html).
+   - Enable the RabbitMQ management plugin:
+     ```
+     rabbitmq-plugins enable rabbitmq_management
+     ```
+   - Start the RabbitMQ service:
+     ```
+     rabbitmq-service start
+     ```
+
+   #### For macOS:
+
+   - Install Homebrew if not already installed:
+     ```
+     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+     ```
+   - Install RabbitMQ using Homebrew:
+     ```
+     brew install rabbitmq
+     ```
+   - Start RabbitMQ:
+     ```
+     brew services start rabbitmq
+     ```
+
+   #### For Linux (Ubuntu/Debian):
+
+   - Update the package list:
+     ```
+     sudo apt update
+     ```
+   - Install Erlang and RabbitMQ:
+     ```
+     sudo apt install erlang
+     sudo apt install rabbitmq-server
+     ```
+   - Enable and start the RabbitMQ service:
+     ```
+     sudo systemctl enable rabbitmq-server
+     sudo systemctl start rabbitmq-server
+     ```
+
+4. **Set up the frontend**:
+
    ```
    cd ../frontend
    npm install
@@ -72,7 +121,7 @@ You can run both the frontend and backend servers using the provided PowerShell 
 
 Or run them separately:
 
-1. Backend:
+1. **Backend**:
 
    ```
    cd backend
@@ -81,7 +130,15 @@ Or run them separately:
    python manage.py runserver
    ```
 
-2. Frontend:
+2. **Celery Worker (for task queue)**:
+
+   ```
+   cd backend
+   celery -A subtitle_generator worker --loglevel=info --pool=solo
+   ```
+
+3. **Frontend**:
+
    ```
    cd frontend
    npm start
