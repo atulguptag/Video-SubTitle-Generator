@@ -5,7 +5,14 @@ from openai import OpenAI
 from moviepy import VideoFileClip
 import logging
 
+file_name = "utils.log"
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler(file_name)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 def extract_audio_from_video(video_path):
@@ -13,8 +20,12 @@ def extract_audio_from_video(video_path):
     try:
         video = VideoFileClip(video_path)
 
-        # Create a temporary file for the audio
-        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_audio:
+        # Create a unique temporary file for the audio
+        # Include video path in the filename to ensure uniqueness
+        import uuid
+        unique_id = uuid.uuid4().hex
+
+        with tempfile.NamedTemporaryFile(suffix=f'_{unique_id}.mp3', delete=False) as temp_audio:
             audio_path = temp_audio.name
 
         # Extract audio to the temporary file
@@ -107,6 +118,7 @@ def generate_subtitles_for_video(video_path, language="en"):
     Generate subtitles for a video using AI.
     Returns the full transcript, subtitles, and video duration.
     """
+    audio_path = None
     try:
         # Extract audio and get video duration
         video = VideoFileClip(video_path)
@@ -115,6 +127,10 @@ def generate_subtitles_for_video(video_path, language="en"):
 
         # Extract audio from video
         audio_path = extract_audio_from_video(video_path)
+
+        # Log the paths for debugging
+        logger.info(f"Video path: {video_path}")
+        logger.info(f"Audio path: {audio_path}")
 
         # Generate transcript with timestamps
         transcript, segments = generate_transcript_with_timestamps(
@@ -127,3 +143,12 @@ def generate_subtitles_for_video(video_path, language="en"):
     except Exception as e:
         logger.error(f"Error generating subtitles: {str(e)}")
         raise
+    finally:
+        # Ensure audio file is always cleaned up
+        if audio_path and os.path.exists(audio_path):
+            try:
+                os.unlink(audio_path)
+                logger.info(f"Temporary audio file {audio_path} cleaned up")
+            except Exception as e:
+                logger.error(
+                    f"Failed to clean up audio file {audio_path}: {str(e)}")

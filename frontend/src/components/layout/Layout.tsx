@@ -451,7 +451,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Box>
 
             {/* Support Section */}
-            <Box sx={{ textAlign: { xs: "center", md: "flex-end" } }}>
+            <Box sx={{ textAlign: { xs: "center", md: "center" } }}>
               <Typography
                 variant="subtitle1"
                 color="primary"

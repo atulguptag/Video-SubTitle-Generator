@@ -7,16 +7,28 @@ from subtitles.models import Subtitle
 from subtitles.utils import generate_subtitles_for_video
 import logging
 
+file_name = "tasks.log"
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler(file_name)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 
 @shared_task
 def process_video(video_id):
     logger.info(f"Starting process_video task for video_id={video_id}")
     video = Video.objects.filter(id=video_id).first()
+
+    if not video:
+        logger.error(f"No video found with ID {video_id}")
+        return
+
     try:
-        # Step 1: Simulate video processing (e.g., extract audio, generate thumbnails)
-        logger.info("Generating thumbnail...")
+        # Step 1: Generate thumbnail
+        logger.info(f"Generating thumbnail for video ID {video_id}...")
         thumbnail_path = os.path.join(
             settings.MEDIA_ROOT, 'thumbnails', f'{video.id}.jpg')
         os.makedirs(os.path.dirname(thumbnail_path), exist_ok=True)
@@ -26,17 +38,28 @@ def process_video(video_id):
         clip.save_frame(thumbnail_path, t=1)
 
         video.thumbnail = os.path.relpath(thumbnail_path, settings.MEDIA_ROOT)
+        video.duration = clip.duration  # Set duration here
         clip.close()
-        logger.info("Thumbnail generated successfully")
+        logger.info(
+            f"Thumbnail generated successfully for video ID {video_id}")
 
-        # Step 2: Generate subtitles
-        logger.info("Generating subtitles...")
-        transcript, subtitles_json, duration = generate_subtitles_for_video(
+        # Step 2: Generate subtitles with unique video path
+        logger.info(f"Generating subtitles for video ID {video_id}...")
+        transcript, subtitles_json, _ = generate_subtitles_for_video(
             video.file.path, 'en')
-        logger.info("Subtitles generated successfully")
+        logger.info(
+            f"Subtitles generated successfully for video ID {video_id}")
 
         # Step 3: Save subtitles to the database
-        logger.info("Saving subtitles to database...")
+        logger.info(f"Saving subtitles to database for video ID {video_id}...")
+
+        # Check if subtitles already exist and delete them
+        existing_subtitles = Subtitle.objects.filter(video=video)
+        if existing_subtitles.exists():
+            logger.warning(
+                f"Found existing subtitles for video ID {video_id}, deleting...")
+            existing_subtitles.delete()
+
         Subtitle.objects.create(
             video=video,
             user=video.user,
@@ -44,17 +67,18 @@ def process_video(video_id):
             subtitles_json=subtitles_json,
             language='en'
         )
-        logger.info("Subtitles saved successfully")
+        logger.info(f"Subtitles saved successfully for video ID {video_id}")
 
-        # Step 4: Update video status to "ready" and save duration to the Video model
-        video.duration = duration
+        # Step 4: Update video status to "ready"
         video.status = "ready"
         video.save()
         logger.info(
-            f"Video {video.id} processed successfully and status set to 'ready'")
+            f"Video {video_id} processed successfully and status set to 'ready'")
+        logger.info(
+            "**********************************************************")
     except Exception as e:
+        logger.error(f"Error processing video {video_id}: {str(e)}")
         video.status = 'error'
         video.error_message = str(e)
         video.save()
-        logger.error(f"Error processing video {video.id}: {str(e)}")
         raise

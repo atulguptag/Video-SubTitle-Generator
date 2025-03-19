@@ -160,7 +160,7 @@ const DashboardPage: React.FC = () => {
   const handleUploadSuccess = async (videoId: number) => {
     try {
       await fetchVideos();
-      toast.success("Video uploaded and processing started.");
+      toast.success("Uploading video and processing started.");
       setTabValue(1);
     } catch (err: any) {
       console.error("Failed to handle upload success:", err);

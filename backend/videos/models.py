@@ -1,3 +1,6 @@
+import os
+from django.dispatch import receiver
+from django.db.models.signals import pre_delete
 from django.db import models
 from django.conf import settings
 
@@ -31,3 +34,24 @@ class Video(models.Model):
 
     def __str__(self):
         return self.title
+
+
+@receiver(pre_delete, sender=Video)
+def delete_video_files(sender, instance, **kwargs):
+    """
+    Delete video file and thumbnail when Video instance is deleted.
+    """
+    # Delete video file
+    if instance.file:
+        if os.path.isfile(instance.file.path):
+            os.remove(instance.file.path)
+            print(f"Deleted video file: {instance.file.path}")
+
+    # Delete thumbnail
+    if instance.thumbnail:
+        try:
+            if os.path.isfile(instance.thumbnail.path):
+                os.remove(instance.thumbnail.path)
+                print(f"Deleted thumbnail: {instance.thumbnail.path}")
+        except Exception as e:
+            print(f"Error deleting thumbnail: {str(e)}")

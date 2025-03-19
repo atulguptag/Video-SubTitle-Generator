@@ -17,8 +17,15 @@ class SubtitleViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Return subtitles for the current user only."""
-        return Subtitle.objects.filter(user=self.request.user)
+        """Return subtitles for the current user, filtered by video ID if provided."""
+        queryset = Subtitle.objects.filter(user=self.request.user)
+
+        # Extract video ID from query parameters if available
+        video_id = self.request.query_params.get('video', None)
+        if video_id:
+            queryset = queryset.filter(video_id=video_id)
+
+        return queryset
 
     def get_serializer_class(self):
         """Return appropriate serializer class based on the action."""
@@ -46,11 +53,8 @@ class SubtitleViewSet(viewsets.ModelViewSet):
     def generate(self, request):
         """Generate subtitles for a video."""
         try:
-            print(f"Received subtitle generation request: {request.data}")
-
             serializer = self.get_serializer(data=request.data)
             if not serializer.is_valid():
-                print(f"Serializer validation errors: {serializer.errors}")
                 return Response(
                     {'detail': serializer.errors},
                     status=status.HTTP_400_BAD_REQUEST
@@ -89,7 +93,7 @@ class SubtitleViewSet(viewsets.ModelViewSet):
                 )
 
             # Generate subtitles using AI
-            transcript, subtitles_json = generate_subtitles_for_video(
+            transcript, subtitles_json, _ = generate_subtitles_for_video(
                 video_path, language)
 
             # Create a new subtitle instance
@@ -107,6 +111,8 @@ class SubtitleViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             print(f"Error generating subtitles: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return Response(
                 {'detail': f'Failed to generate subtitles: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -118,28 +124,16 @@ class SubtitleViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated])
 def export_subtitle(request, pk):
     """Export subtitles in the requested format."""
-    print(f"*** EXPORT VIEW CALLED with PK={pk} ***")
-    print(f"Request path: {request.path}")
-    print(f"Request user: {request.user}")
-
-    subtitles = Subtitle.objects.filter(user=request.user)
-    print(
-        f"Available subtitle IDs for user {request.user.id}: {[s.id for s in subtitles]}")
-
     try:
         subtitle = Subtitle.objects.filter(id=pk, user=request.user).first()
         if not subtitle:
-            print(
-                f"Subtitle with ID {pk} not found for user {request.user.id}.")
             return Response(
                 {'detail': f'Subtitle with ID {pk} not found for the current user.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        print(f"Found subtitle: {subtitle.id}")
 
         # Get the requested format (default to SRT)
         export_format = request.query_params.get('format', 'srt').lower()
-        print(f"Export format: {export_format}")
         if export_format not in ['srt']:
             return Response(
                 {'detail': 'Unsupported format. Only "srt" is supported.'},
@@ -148,7 +142,6 @@ def export_subtitle(request, pk):
 
         # Convert subtitles_json to SRT format
         subtitles_json = subtitle.subtitles_json
-        print(f"Subtitle JSON type: {type(subtitles_json)}")
 
         if not isinstance(subtitles_json, list):
             try:
