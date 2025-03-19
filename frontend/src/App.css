@@ -1,0 +1,6 @@
+:root {
+  --deep-blue: #4d3ae4;
+  --base-raspberry: 310, 74%, 45%;
+  --raspberry: hsl(var(--base-raspberry));
+  --red: #f33f60;
+}
