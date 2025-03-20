@@ -126,9 +126,8 @@ const EditorPage: React.FC = () => {
   const handleExportSubtitles = async () => {
     if (!subtitle) return;
 
-    setExportLoading(true);
-
     try {
+      setExportLoading(true);
       const response = await subtitleService.exportSubtitles(
         subtitle.id,
         "srt"

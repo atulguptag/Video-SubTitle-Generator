@@ -1,12 +1,10 @@
 import os
-import json
 from subtitles.models import Subtitle
 from rest_framework.response import Response
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from subtitles.utils import generate_subtitles_for_video
 from rest_framework import viewsets, status, permissions
 from .serializers import SubtitleSerializer, SubtitleStyleSerializer, SubtitleGenerateSerializer
-from django.http import HttpResponse
 
 
 class SubtitleViewSet(viewsets.ModelViewSet):
@@ -117,65 +115,3 @@ class SubtitleViewSet(viewsets.ModelViewSet):
                 {'detail': f'Failed to generate subtitles: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-    @action(detail=True, methods=['get'])
-    def export_subtitle(self, request, pk):
-        """Export subtitles in the requested format."""
-        try:
-            subtitle = Subtitle.objects.filter(
-                id=pk, user=request.user).first()
-            if not subtitle:
-                return Response(
-                    {'detail': f'Subtitle with ID {pk} not found for the current user.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Get the requested format (default to SRT)
-            export_format = request.query_params.get('format', 'srt').lower()
-            if export_format not in ['srt']:
-                return Response(
-                    {'detail': 'Unsupported format. Only "srt" is supported.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Convert subtitles_json to SRT format
-            subtitles_json = subtitle.subtitles_json
-
-            if not isinstance(subtitles_json, list):
-                try:
-                    subtitles_json = json.loads(subtitles_json)
-                except Exception as e:
-                    print(f"Error parsing subtitles_json: {str(e)}")
-                    return Response(
-                        {'detail': f'Error parsing subtitle data: {str(e)}'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-
-            srt_content = ""
-            for index, sub in enumerate(subtitles_json, start=1):
-                start_time = format_time(sub['start'])
-                end_time = format_time(sub['end'])
-                text = sub['text'].replace("\n", " ")
-                srt_content += f"{index}\n{start_time} --> {end_time}\n{text}\n\n"
-
-            # Return the SRT file as a downloadable response
-            response = HttpResponse(srt_content, content_type="text/plain")
-            response["Content-Disposition"] = f'attachment; filename="subtitles_{pk}.srt"'
-            return response
-        except Exception as e:
-            print(f"Error exporting subtitles: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return Response(
-                {'detail': f'Error generating SRT: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-def format_time(seconds):
-    """Convert seconds to SRT time format (HH:MM:SS,mmm)."""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"

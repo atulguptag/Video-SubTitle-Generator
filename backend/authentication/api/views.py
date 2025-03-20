@@ -575,6 +575,11 @@ class ExportUserDataView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         user = request.user
 
         try:
@@ -627,6 +632,8 @@ class ExportUserDataView(APIView):
             return response
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response(
                 {"detail": f"Failed to export user data: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
