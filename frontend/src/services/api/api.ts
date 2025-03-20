@@ -34,6 +34,13 @@ export const authService = {
 
   logout: () => API.post("/auth/logout/"),
 
+  deleteAccount: () => API.delete("/auth/delete-account/"),
+
+  exportUserData: () =>
+    API.get("/auth/export-data/", {
+      responseType: "blob",
+    }),
+
   getCurrentUser: () => API.get("/auth/me/"),
 
   requestPasswordReset: (email: string) =>

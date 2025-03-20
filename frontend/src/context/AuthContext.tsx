@@ -50,6 +50,8 @@ interface AuthContextType {
   updateProfile: (profileData: any) => Promise<User>;
   resendVerificationEmail: (email: string) => Promise<void>;
   verifyEmail: (uid: string, token: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  exportUserData: () => Promise<Blob>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -233,6 +235,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const deleteAccount = async (): Promise<void> => {
+    try {
+      await authService.deleteAccount();
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+    } catch (error) {
+      console.error("Account deletion failed:", error);
+      throw error;
+    }
+  };
+
+  const exportUserData = async (): Promise<Blob> => {
+    try {
+      const response = await authService.exportUserData();
+      return response.data;
+    } catch (error) {
+      console.error("Data export failed:", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -250,6 +274,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         updateProfile,
         resendVerificationEmail,
         verifyEmail,
+        deleteAccount,
+        exportUserData,
       }}
     >
       {children}

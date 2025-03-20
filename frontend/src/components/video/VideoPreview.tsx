@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Box, Paper, Button, CircularProgress } from "@mui/material";
+import { Box, Paper, CircularProgress } from "@mui/material";
 import { toast } from "react-toastify";
 
 interface VideoPreviewProps {
@@ -14,14 +14,9 @@ interface VideoPreviewProps {
     background_opacity: number;
     text_alignment: string;
   };
-  onExport?: () => void;
 }
 
-const VideoPreview: React.FC<VideoPreviewProps> = ({
-  videoUrl,
-  subtitles,
-  onExport,
-}) => {
+const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, subtitles }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSubtitle, setCurrentSubtitle] = useState<string[]>([]);
@@ -233,19 +228,6 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({
           </Box>
         )}
       </Box>
-
-      {onExport && (
-        <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={onExport}
-            disabled={!subtitles}
-          >
-            Export Subtitles
-          </Button>
-        </Box>
-      )}
 
       <style>
         {`

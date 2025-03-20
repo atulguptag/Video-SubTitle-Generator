@@ -1,8 +1,10 @@
 import os
 import random
+import json
 import string
 from datetime import timedelta
 from django.utils import timezone
+from django.http import HttpResponse
 from django.contrib.auth import get_user_model, authenticate
 from django.core.mail import send_mail
 from django.conf import settings
@@ -528,4 +530,104 @@ class GoogleAuthProcessView(APIView):
             return Response(
                 {'error': f'Error processing token: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class DeleteAccountView(APIView):
+    """View for deleting user account."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+
+        try:
+            # Get related objects to delete
+            videos = user.videos.all()
+            for video in videos:
+                video.delete()
+
+            # Delete subtitles
+            subtitles = user.subtitles.all()
+            subtitles.delete()
+
+            # Revoke auth token
+            Token.objects.filter(user=user).delete()
+
+            # Delete the user
+            user.delete()
+
+            return Response(
+                {"detail": "Account successfully deleted"},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"detail": f"Failed to delete account: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ExportUserDataView(APIView):
+    """View for exporting all user data."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        try:
+            # Collect user data
+            user_data = UserSerializer(user).data
+
+            # Collect video data
+            videos = user.videos.all()
+            video_data = [
+                {
+                    'id': video.id,
+                    'title': video.title,
+                    'description': video.description,
+                    'created_at': video.created_at.isoformat(),
+                    'file_path': video.file.name if video.file else None,
+                }
+                for video in videos
+            ]
+
+            # Collect subtitle data
+            subtitles = user.subtitles.all()
+            subtitle_data = [
+                {
+                    'id': subtitle.id,
+                    'video_id': subtitle.video_id,
+                    'language': subtitle.language,
+                    'transcript': subtitle.transcript,
+                    'subtitles_json': subtitle.subtitles_json,
+                    'font': subtitle.font,
+                    'style': subtitle.style,
+                    'created_at': subtitle.created_at.isoformat() if subtitle.created_at else None,
+                }
+                for subtitle in subtitles
+            ]
+
+            # Create data package
+            data_package = {
+                'user': user_data,
+                'videos': video_data,
+                'subtitles': subtitle_data,
+            }
+
+            # Create JSON response
+            response = HttpResponse(
+                json.dumps(data_package, indent=4),
+                content_type='application/json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{user.username}_data_export.json"'
+
+            return response
+
+        except Exception as e:
+            return Response(
+                {"detail": f"Failed to export user data: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

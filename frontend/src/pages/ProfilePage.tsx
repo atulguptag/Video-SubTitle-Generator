@@ -27,6 +27,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
+import SecuritySection from "../components/security/SecuritySection";
 
 // Styled components (unchanged)
 const ProfileAvatar = styled(Avatar)(({ theme }) => ({
@@ -790,6 +791,7 @@ const ProfilePage: React.FC = () => {
           )}
         </Box>
       </Paper>
+      <SecuritySection />
     </Container>
   );
 };
