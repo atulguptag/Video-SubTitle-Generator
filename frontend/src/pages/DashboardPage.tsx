@@ -127,6 +127,35 @@ const DashboardPage: React.FC = () => {
     }
   }, [videos, isLoading, retryCount, pollingInterval]);
 
+  useEffect(() => {
+    // Only show success messages when you are in the "My Videos" tab (tabValue === 1)
+    if (tabValue !== 1) return;
+
+    // Get the list of video IDs that have already shown the "ready" success message
+    const storedReadyIDs = JSON.parse(
+      localStorage.getItem("readyVideos") || "[]"
+    );
+
+    // Find any new videos that became ready but haven't triggered a success message yet
+    const newlyReadyVideos = videos.filter(
+      (video) => video.status === "ready" && !storedReadyIDs.includes(video.id)
+    );
+
+    // Show success messages for newly ready videos
+    newlyReadyVideos.forEach((video) => {
+      toast.success(`Your video "${video.title}" is now ready!`);
+    });
+
+    // Update the stored list so we don't show these success messages again
+    if (newlyReadyVideos.length > 0) {
+      const updatedReadyIDs = [
+        ...storedReadyIDs,
+        ...newlyReadyVideos.map((v) => v.id),
+      ];
+      localStorage.setItem("readyVideos", JSON.stringify(updatedReadyIDs));
+    }
+  }, [videos, tabValue]);
+
   const fetchVideos = async () => {
     setIsLoading(true);
 
