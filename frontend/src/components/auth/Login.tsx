@@ -14,31 +14,12 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { useGoogleLogin } from "@react-oauth/google";
-import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
+import FacebookLogin, {
+  SuccessResponse,
+} from "@greatsumini/react-facebook-login";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import FacebookIcon from "@mui/icons-material/Facebook";
-
-// Facebook response type
-interface FacebookLoginResponse {
-  accessToken: string;
-  data_access_expiration_time: number;
-  expiresIn: number;
-  graphDomain: string;
-  id: string;
-  name: string;
-  signedRequest: string;
-  userID: string;
-  email?: string;
-  picture?: {
-    data: {
-      height: number;
-      is_silhouette: boolean;
-      url: string;
-      width: number;
-    };
-  };
-}
 
 const Login: React.FC = () => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -103,13 +84,13 @@ const Login: React.FC = () => {
   });
 
   // Facebook Login
-  const handleFacebookLogin = async (response: FacebookLoginResponse) => {
+  const handleFacebookLogin = async (response: SuccessResponse) => {
     if (response.accessToken) {
       setIsFacebookLoading(true);
       try {
         await facebookLogin(response.accessToken);
         navigate("/dashboard");
-        toast.success("Successfully Logged in via Facebook!")
+        toast.success("Successfully Logged in via Facebook!");
       } catch (err: any) {
         console.error("Facebook login failed:", err);
         toast.error("Facebook login failed. Please try again.");
@@ -242,8 +223,8 @@ const Login: React.FC = () => {
 
           <FacebookLogin
             appId={process.env.REACT_APP_FACEBOOK_APP_ID || ""}
-            callback={handleFacebookLogin}
-            render={(renderProps: any) => (
+            onSuccess={handleFacebookLogin}
+            render={(renderProps) => (
               <Button
                 fullWidth
                 variant="outlined"
@@ -255,7 +236,9 @@ const Login: React.FC = () => {
                   )
                 }
                 onClick={renderProps.onClick}
-                disabled={isGoogleLoading || isFacebookLoading}
+                disabled={
+                  isGoogleLoading || isFacebookLoading || !renderProps.onClick
+                }
                 sx={{
                   borderColor: "#1877F2",
                   color: "#1877F2",
