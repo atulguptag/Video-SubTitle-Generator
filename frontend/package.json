@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@greatsumini/react-facebook-login": "^3.4.0",
     "@mui/icons-material": "^6.4.7",
     "@mui/material": "^6.4.7",
     "@mui/system": "^6.4.7",
@@ -20,7 +21,6 @@
     "axios": "^1.8.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-facebook-login": "^4.1.1",
     "react-router-dom": "^7.3.0",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",

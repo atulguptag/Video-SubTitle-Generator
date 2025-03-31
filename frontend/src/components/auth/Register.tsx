@@ -14,31 +14,12 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { useGoogleLogin } from "@react-oauth/google";
-import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
+import FacebookLogin, {
+  SuccessResponse,
+} from "@greatsumini/react-facebook-login";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import FacebookIcon from "@mui/icons-material/Facebook";
-
-// Facebook response type
-interface FacebookLoginResponse {
-  accessToken: string;
-  data_access_expiration_time: number;
-  expiresIn: number;
-  graphDomain: string;
-  id: string;
-  name: string;
-  signedRequest: string;
-  userID: string;
-  email?: string;
-  picture?: {
-    data: {
-      height: number;
-      is_silhouette: boolean;
-      url: string;
-      width: number;
-    };
-  };
-}
 
 const Register: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -104,7 +85,7 @@ const Register: React.FC = () => {
         console.error("Google login failed:", err);
         toast.error("Google login failed. Please try again.");
       } finally {
-        setIsGoogleLoading(true);
+        setIsGoogleLoading(false);
       }
     },
     onError: () => {
@@ -113,7 +94,7 @@ const Register: React.FC = () => {
   });
 
   // Facebook Login
-  const handleFacebookLogin = async (response: FacebookLoginResponse) => {
+  const handleFacebookLogin = async (response: SuccessResponse) => {
     if (response.accessToken) {
       setIsFacebookLoading(true);
       try {
@@ -124,7 +105,7 @@ const Register: React.FC = () => {
         console.error("Facebook login failed:", err);
         toast.error("Facebook login failed. Please try again.");
       } finally {
-        setIsFacebookLoading(true);
+        setIsFacebookLoading(false);
       }
     }
   };
@@ -282,8 +263,8 @@ const Register: React.FC = () => {
 
           <FacebookLogin
             appId={process.env.REACT_APP_FACEBOOK_APP_ID || ""}
-            callback={handleFacebookLogin}
-            render={(renderProps: any) => (
+            onSuccess={handleFacebookLogin}
+            render={(renderProps) => (
               <Button
                 fullWidth
                 variant="outlined"
@@ -295,7 +276,9 @@ const Register: React.FC = () => {
                   )
                 }
                 onClick={renderProps.onClick}
-                disabled={isGoogleLoading || isFacebookLoading}
+                disabled={
+                  isGoogleLoading || isFacebookLoading || !renderProps.onClick
+                }
                 sx={{
                   borderColor: "#1877F2",
                   color: "#1877F2",
